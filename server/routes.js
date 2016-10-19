@@ -10,30 +10,41 @@ module.exports = function (app) {
             })
         }
         var userId = req.body.userId;
-        var textToParse = req.body.text;
+        var textToParseURLFormat = encodeURI(req.body.text);
+        console.log(textToParseURLFormat);
         var options = {
-            method: 'POST',
-            url: 'http://api.meaningcloud.com/class-1.1',
-            headers: {'content-type': 'application/x-www-form-urlencoded'},
-            form: {
-                key: '0caf55009f1de55222b4d258387fb9b8',
-                txt: textToParse,
-                model: "Bot"
+            method: 'GET',
+            url: 'https://api.wit.ai/message?v=20161019&q='+textToParseURLFormat,
+            auth: {
+                'bearer': 'GKIQYF7KBTWBDI7S5JAXU6M7UFKK5HWN'
             }
         };
 
+
         request(options, function (error, response, body) {
             if (error) throw new Error(error);
+            console.log(body);
             var result = JSON.parse(body);
             console.log(result.status);
-            var cat_list = result.category_list;
+            var entities = result.entities;
+            var slots = [];
+            for(var key in entities) {
+                var entity = (entities[key][0]);
+                if(entity.confidence > 0.5 && key != "intent") {
+                    var slot = {};
+                    slot[key] = entity.value;
+                    slots.push(slot);
+                }
+            }
+            console.log(slots);
+            var intentList = entities.intent;
             var intent = "empty";
-            if (cat_list && cat_list.length > 0) {
-                console.log(cat_list[0]);
-                intent = cat_list[0].code;
+            if (intentList && intentList.length > 0) {
+                intent = intentList[0].value;
             }
             res.status(200).send({
-                intent: intent
+                intent: intent,
+                slots: slots
             });
             var context = new Context();
             context.userId = userId;
